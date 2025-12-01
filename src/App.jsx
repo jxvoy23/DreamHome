@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Home, Image as ImageIcon, Settings, Share, LayoutGrid, LogOut, Trash2, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Sparkles, Home, Image as ImageIcon, Settings, Share, LayoutGrid, LogOut, Trash2, Mail, Lock, AlertCircle, Copy } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -272,10 +272,10 @@ const DreamHomeApp = () => {
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState('create');
   const [prompt, setPrompt] = useState('');
-  // removed uploadedImage state
+  // Removed upload state
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentDesign, setCurrentDesign] = useState(null);
-  const [gallery, setGallery] = useState([]);
+  const [gallery, setGallery] = useState([]); // Will store session images
   const [error, setError] = useState(null);
   
   // --- DARK MODE STATE ---
@@ -343,12 +343,15 @@ const DreamHomeApp = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Query HISTORY of PROMPTS only to avoid crash
     const q = query(
       collection(db, 'artifacts', appId, 'users', user.uid, 'designs'),
       orderBy('createdAt', 'desc')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // We map but handle potential missing images (old data might be text only)
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Filter out items that might be too big or invalid if necessary
       setGallery(items);
     }, (err) => console.error("Firestore Error:", err));
     return () => unsubscribe();
@@ -360,18 +363,15 @@ const DreamHomeApp = () => {
     setError(null);
     setCurrentDesign(null);
 
-    // Prompt enhancement for better results
-    const finalPrompt = "Photorealistic interior design, architectural photography, high quality: " + prompt;
-
     try {
-      // Call Imagen 4.0 (Text-to-Image) - using the one that worked previously for text
+      // Call Imagen 4.0 (Text-to-Image)
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            instances: [{ prompt: finalPrompt }],
+            instances: [{ prompt: "Photorealistic interior design: " + prompt }],
             parameters: { sampleCount: 1 }
           }),
         }
@@ -401,8 +401,11 @@ const DreamHomeApp = () => {
         setCurrentDesign(newDesign);
         
         if (user) {
+          // Save ONLY THE PROMPT to Firestore to avoid the 1MB limit crash
+          // Ideally you would save the image to Storage, but for this demo we just save metadata
           await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'designs'), {
-            ...newDesign,
+            prompt: prompt,
+            // image: base64Image, // <--- COMMENTED OUT TO PREVENT CRASH
             createdAt: serverTimestamp()
           });
         }
@@ -606,6 +609,8 @@ const DreamHomeApp = () => {
                         placeholder="e.g., A minimalist living room with floor-to-ceiling windows overlooking a forest..."
                         className="input-textarea mb-4"
                       />
+
+                      {/* No image upload anymore */}
                       
                       {error && <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#dc2626', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
 
@@ -649,7 +654,11 @@ const DreamHomeApp = () => {
                     <div className="gallery-grid">
                       {gallery.map((item) => (
                         <div key={item.id} className="gallery-item">
-                          <img src={item.image} alt="Design" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {item.image ? (
+                             <img src={item.image} alt="Design" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                             <div style={{ width: '100%', height: '100%', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1rem', textAlign: 'center' }}>Image not saved (preview only)</div>
+                          )}
                           <button 
                             onClick={(e) => { e.stopPropagation(); deleteDesign(item.id); }}
                             className="gallery-delete btn-icon btn-danger"
