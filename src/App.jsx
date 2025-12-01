@@ -76,13 +76,32 @@ const styles = `
   .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
 `;
 
-// --- FIREBASE CONFIGURATION ---
-const firebaseConfig = JSON.parse(__firebase_config);
+// --- CONFIGURATION START ---
+
+// 1. PASTE YOUR FIREBASE CONFIGURATION HERE
+// Replace this entire object with the one you saved in your notepad.
+const firebaseConfig = {
+  apiKey: "AIzaSyBcZOBqmeHOTvyRN-PCmxRHE9jez-SB6v0",
+  authDomain: "dreamhome-3d36c.firebaseapp.com",
+  projectId: "dreamhome-3d36c",
+  storageBucket: "dreamhome-3d36c.firebasestorage.app",
+  messagingSenderId: "845836594322",
+  appId: "1:845836594322:web:12150363004760aa014a4b",
+  measurementId: "G-M3PF0SQEGW"
+};
+
+// 2. PASTE YOUR GOOGLE GEMINI API KEY HERE
+// Get one from https://aistudio.google.com/app/apikey
+const apiKey = "AIzaSyCXjs7RRzAfeo4gdGBnWp0ESToAFGwmtGI"; 
+
+// 3. APP ID
+const appId = "dreamhome-web-v1";
+
+// --- CONFIGURATION END ---
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'dreamhome-default';
-const apiKey = ""; // API Key injected by environment
 
 const DreamHomeApp = () => {
   // --- STATE ---
